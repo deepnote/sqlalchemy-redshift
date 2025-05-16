@@ -1240,6 +1240,9 @@ class RedshiftDialect_psycopg2(
 ):
     supports_statement_cache = False
 
+    def _set_backslash_escapes(self, connection):
+        self._backslash_escapes = "off"
+
 
 # Add RedshiftDialect synonym for backwards compatibility.
 RedshiftDialect = RedshiftDialect_psycopg2
@@ -1249,6 +1252,9 @@ class RedshiftDialect_psycopg2cffi(
     Psycopg2RedshiftDialectMixin, PGDialect_psycopg2cffi
 ):
     supports_statement_cache = False
+
+    def _set_backslash_escapes(self, connection):
+        self._backslash_escapes = "off"
 
 
 class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
