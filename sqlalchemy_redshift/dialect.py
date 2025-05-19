@@ -1434,6 +1434,10 @@ class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
         default_args.update(cparams)
         return cargs, default_args
 
+    def _set_backslash_escapes(self, connection):
+        # Redshift doesn’t implement SHOW standard_conforming_strings
+        self._backslash_escapes = "off"
+
 
 def gen_columns_from_children(root):
     """
