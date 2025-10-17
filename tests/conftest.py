@@ -63,8 +63,8 @@ def connection_kwargs(redshift_dialect_flavor):
 
 @pytest.fixture(scope="session")
 def iam_role_arn():
-    """ The iam_role_arn fixture constructs the ARN for the IAM role. If provided,
-    the following environment variable will be used.
+    """ The iam_role_arn fixture constructs the ARN for the IAM role.
+    If provided, the following environment variable will be used.
 
     - REDSHIFT_IAM_ROLE_ARN
     """

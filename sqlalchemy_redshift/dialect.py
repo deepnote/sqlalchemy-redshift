@@ -994,10 +994,64 @@ class RedshiftDialectMixin(DefaultDialect):
         elif sa_version >= Version('1.4.0') and 'identity' not in kw:
             kw['identity'] = None
 
-        column_info = super(RedshiftDialectMixin, self)._get_column_info(
-            *args,
-            **kw
-        )
+        # Check if parent class has _get_column_info (SA 1.4 and earlier)
+        parent_class = super(RedshiftDialectMixin, self)
+        if hasattr(parent_class, '_get_column_info'):
+            # SA 1.4 path: use parent implementation
+            column_info = parent_class._get_column_info(*args, **kw)
+        else:
+            # SA 2.0 path: implement ourselves
+            # Extract the kwargs we need for SA 2.0
+            name = kw.get('name')
+            format_type = kw.get('format_type')
+            default = kw.get('default')
+            notnull = kw.get('notnull', False)
+            comment = kw.get('comment')
+
+            # Parse the type from format_type string
+            # Use the parent's type parser if available
+            from sqlalchemy import util
+            from sqlalchemy.dialects.postgresql import base as pg_base
+
+            # Get the type object from format_type
+            attype = format_type
+            # Match against known type names
+            charlen = re.search(r'\((\d+)\)', attype)
+            if charlen:
+                attype = re.sub(r'\(\d+\)', '', attype)
+
+            # Remove array markers for type matching
+            is_array = attype.endswith('[]')
+            if is_array:
+                attype = attype[:-2]
+
+            # Look up the type in ischema_names
+            if attype in self.ischema_names:
+                coltype = self.ischema_names[attype]
+            else:
+                # Fallback to NullType for unknown types
+                coltype = NullType
+
+            # Instantiate the type with length if it's a string type
+            if charlen and hasattr(coltype, '__call__'):
+                coltype = coltype(int(charlen.group(1)))
+            elif hasattr(coltype, '__call__'):
+                coltype = coltype()
+
+            # Handle array types
+            if is_array:
+                from sqlalchemy.dialects.postgresql import ARRAY
+                coltype = ARRAY(coltype)
+
+            column_info = {
+                'name': name,
+                'type': coltype,
+                'nullable': not notnull,
+                'default': default,
+            }
+            if comment:
+                column_info['comment'] = comment
+
         if isinstance(column_info['type'], VARCHAR):
             if column_info['type'].length is None:
                 column_info['type'] = NullType()
