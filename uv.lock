@@ -120,7 +120,6 @@ wheels = [
 
 [[package]]
 name = "sqlalchemy-redshift"
-version = "0.8.15"
 source = { editable = "." }
 dependencies = [
     { name = "packaging" },
