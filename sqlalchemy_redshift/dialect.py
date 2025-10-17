@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 from packaging.version import Version
 from sqlalchemy import inspect, util
-from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION
+from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, ENUM
 from sqlalchemy.dialects.postgresql.base import (PGCompiler, PGDDLCompiler,
                                                  PGDialect, PGExecutionContext,
                                                  PGIdentifierPreparer,
@@ -22,9 +22,8 @@ from sqlalchemy.sql.expression import (BinaryExpression, BooleanClauseList,
                                        Delete)
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.sql import sqltypes
-from sqlalchemy.types import (BIGINT, BOOLEAN, CHAR, DATE, DECIMAL, ENUM,
-                              INTEGER, REAL, SMALLINT, TIMESTAMP, VARCHAR,
-                              NullType)
+from sqlalchemy.types import (BIGINT, BOOLEAN, CHAR, DATE, DECIMAL, INTEGER,
+                              REAL, SMALLINT, TIMESTAMP, VARCHAR, NullType)
 
 from .commands import (AlterTableAppendCommand, Compression, CopyCommand,
                        CreateLibraryCommand, Encoding, Format,
