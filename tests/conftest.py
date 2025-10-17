@@ -175,21 +175,10 @@ class DatabaseTool(object):
 
     @contextlib.contextmanager
     def _database(self):
-        from sqlalchemy_redshift.dialect import \
-            RedshiftDialect_psycopg2cffi
-
         db_name = database_name()
-        opts = (
-            {"isolation_level": "AUTOCOMMIT"}
-            if not isinstance(
-                self.engine.dialect, RedshiftDialect_psycopg2cffi
-            )
-            else {}
-        )
+        opts = {"isolation_level": "AUTOCOMMIT"}
 
         with self.engine.connect().execution_options(**opts) as conn:
-            if isinstance(self.engine.dialect, RedshiftDialect_psycopg2cffi):
-                conn.execute(sa.text("COMMIT"))
             conn.execute(
                 sa.text('CREATE DATABASE {db_name}'.format(db_name=db_name))
             )
@@ -207,10 +196,6 @@ class DatabaseTool(object):
             )
         finally:
             with self.engine.connect().execution_options(**opts) as conn:
-                if isinstance(
-                        self.engine.dialect, RedshiftDialect_psycopg2cffi
-                ):
-                    conn.execute(sa.text("COMMIT"))
                 conn.execute(
                     sa.text('DROP DATABASE {db_name}'.format(db_name=db_name))
                 )
@@ -247,7 +232,7 @@ class DriverParameterizedTests:
     Helper class for generating fixture params using pytest config opts.
 
     """
-    DEFAULT_DRIVERS = ['psycopg2', 'psycopg2cffi']
+    DEFAULT_DRIVERS = ['psycopg2']
     redshift_dialect_flavors = None
 
     @classmethod

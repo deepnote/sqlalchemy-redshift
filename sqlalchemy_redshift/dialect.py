@@ -15,7 +15,6 @@ from sqlalchemy.dialects.postgresql.base import (PGCompiler, PGDDLCompiler,
                                                  PGIdentifierPreparer,
                                                  PGTypeCompiler)
 from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-from sqlalchemy.dialects.postgresql.psycopg2cffi import PGDialect_psycopg2cffi
 from sqlalchemy.engine import reflection
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.ext.compiler import compiles
@@ -72,7 +71,7 @@ __all__ = (
     'HLLSKETCH',
 
     'RedshiftDialect', 'RedshiftDialect_psycopg2',
-    'RedshiftDialect_psycopg2cffi', 'RedshiftDialect_redshift_connector',
+    'RedshiftDialect_redshift_connector',
 
     'CopyCommand', 'UnloadFromSelect', 'Compression',
     'Encoding', 'Format', 'CreateLibraryCommand', 'AlterTableAppendCommand',
@@ -1301,15 +1300,6 @@ class RedshiftDialect_psycopg2(
 
 # Add RedshiftDialect synonym for backwards compatibility.
 RedshiftDialect = RedshiftDialect_psycopg2
-
-
-class RedshiftDialect_psycopg2cffi(
-    Psycopg2RedshiftDialectMixin, PGDialect_psycopg2cffi
-):
-    supports_statement_cache = False
-
-    def _set_backslash_escapes(self, connection):
-        self._backslash_escapes = "off"
 
 
 class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
