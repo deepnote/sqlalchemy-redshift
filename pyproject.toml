@@ -42,7 +42,7 @@ redshift = "sqlalchemy_redshift.dialect:RedshiftDialect_psycopg2"
 "redshift.redshift_connector" = "sqlalchemy_redshift.dialect:RedshiftDialect_redshift_connector"
 
 [tool.hatch.build.targets.wheel]
-packages = ["sqlalchemy_redshift", "redshift_sqlalchemy"]
+packages = ["sqlalchemy_redshift"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "sqlalchemy_redshift/redshift-ca-bundle.crt" = "sqlalchemy_redshift/redshift-ca-bundle.crt"
@@ -50,7 +50,6 @@ packages = ["sqlalchemy_redshift", "redshift_sqlalchemy"]
 [tool.hatch.build.targets.sdist]
 include = [
     "sqlalchemy_redshift/",
-    "redshift_sqlalchemy/",
     "README.rst",
     "CHANGES.rst",
     "LICENSE",
