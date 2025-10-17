@@ -22,8 +22,9 @@ from sqlalchemy.sql.expression import (BinaryExpression, BooleanClauseList,
                                        Delete)
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.sql import sqltypes
-from sqlalchemy.types import (BIGINT, BOOLEAN, CHAR, DATE, DECIMAL, INTEGER,
-                              REAL, SMALLINT, TIMESTAMP, VARCHAR, NullType)
+from sqlalchemy.types import (BIGINT, BOOLEAN, CHAR, DATE, DECIMAL, ENUM,
+                              INTEGER, REAL, SMALLINT, TIMESTAMP, VARCHAR,
+                              NullType)
 
 from .commands import (AlterTableAppendCommand, Compression, CopyCommand,
                        CreateLibraryCommand, Encoding, Format,
@@ -980,7 +981,7 @@ class RedshiftDialectMixin(DefaultDialect):
             if key.schema == schema and relation.relkind == relkind:
                 relation_names.append(key.name)
         return relation_names
-    
+
     # Copied from SQLAlchemy 1.4 to support 1.4 and 2.0 simultaneously
     # https://github.com/sqlalchemy/sqlalchemy/blob/rel_1_4/lib/sqlalchemy/dialects/postgresql/base.py#L4007
     def __get_column_info(
@@ -1178,7 +1179,7 @@ class RedshiftDialectMixin(DefaultDialect):
             del kw['identity']
         elif sa_version >= Version('1.4.0') and 'identity' not in kw:
             kw['identity'] = None
-        
+
         column_info = self.__get_column_info(
             *args,
             **kw

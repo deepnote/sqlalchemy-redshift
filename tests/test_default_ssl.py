@@ -5,7 +5,9 @@ from sqlalchemy_redshift.dialect import (
 )
 
 
-CERT_PATH = str(files("sqlalchemy_redshift").joinpath("redshift-ca-bundle.crt"))
+CERT_PATH = str(
+    files("sqlalchemy_redshift").joinpath("redshift-ca-bundle.crt")
+)
 
 
 def test_ssl_args(redshift_dialect_flavor):
