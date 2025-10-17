@@ -3,8 +3,8 @@ import json
 import re
 from collections import defaultdict, namedtuple
 from logging import getLogger
+from importlib.resources import files
 
-import pkg_resources
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 from packaging.version import Version
@@ -1399,9 +1399,8 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
         """
         default_args = {
             'sslmode': 'verify-full',
-            'sslrootcert': pkg_resources.resource_filename(
-                __name__,
-                'redshift-ca-bundle.crt'
+            'sslrootcert': str(
+                files('sqlalchemy_redshift').joinpath('redshift-ca-bundle.crt')
             ),
         }
         cargs, cparams = (
@@ -1413,7 +1412,7 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
         return cargs, default_args
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         try:
             return importlib.import_module(cls.driver)
         except ImportError:
@@ -1421,11 +1420,26 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
                 'No module named {}'.format(cls.driver)
             )
 
+    @classmethod
+    def dbapi(cls):
+        # Backwards compatibility with SQLAlchemy < 2.0
+        return cls.import_dbapi()
+
 
 class RedshiftDialect_psycopg2(
     Psycopg2RedshiftDialectMixin, PGDialect_psycopg2
 ):
     supports_statement_cache = False
+
+    @classmethod
+    def import_dbapi(cls):
+        # Use super() to properly call the mixin's implementation
+        return super(RedshiftDialect_psycopg2, cls).import_dbapi()
+
+    @classmethod
+    def dbapi(cls):
+        # Use super() for backwards compatibility with SQLAlchemy < 2.0
+        return super(RedshiftDialect_psycopg2, cls).dbapi()
 
     def _set_backslash_escapes(self, connection):
         self._backslash_escapes = "off"
@@ -1493,7 +1507,7 @@ class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
         self.client_encoding = client_encoding
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         try:
             driver_module = importlib.import_module(cls.driver)
 
@@ -1509,6 +1523,11 @@ class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
                 'No module named redshift_connector. Please install '
                 'redshift_connector to use this sqlalchemy dialect.'
             )
+
+    @classmethod
+    def dbapi(cls):
+        # Backwards compatibility with SQLAlchemy < 2.0
+        return cls.import_dbapi()
 
     def set_client_encoding(self, connection, client_encoding):
         """

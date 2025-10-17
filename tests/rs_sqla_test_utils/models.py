@@ -2,10 +2,14 @@ import sqlalchemy as sa
 
 from sqlalchemy import event
 from sqlalchemy import DDL
-from sqlalchemy.ext import declarative
+
+try:
+    from sqlalchemy.orm import declarative_base
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
 
 
-Base = declarative.declarative_base()
+Base = declarative_base()
 event.listen(
     Base.metadata,
     'before_create',
