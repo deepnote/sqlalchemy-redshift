@@ -501,7 +501,7 @@ class CopyCommand(_ExecutableClause):
     aws_account_id: str, optional
         AWS account ID for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
-         or role arns (``iam_role_arns``) directly.
+        or role arns (``iam_role_arns``) directly.
     iam_role_name: str, optional
         IAM role name for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
@@ -930,7 +930,7 @@ class CreateLibraryCommand(_ExecutableClause):
     aws_account_id: str, optional
         AWS account ID for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
-         or role arns (``iam_role_arns``) directly.
+        or role arns (``iam_role_arns``) directly.
     iam_role_name: str, optional
         IAM role name for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
