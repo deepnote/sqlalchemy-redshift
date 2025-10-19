@@ -30,6 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "SQLAlchemy>=1.4.15,<3.0.0",
+    "packaging",
 ]
 
 [project.urls]

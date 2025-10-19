@@ -9,7 +9,7 @@ for package in ['psycopg2', 'psycopg2-binary']:
     except PackageNotFoundError:
         pass
 
-__version__ = version('sqlalchemy-redshift')
+__version__ = version('deepnote-sqlalchemy-redshift')
 
 from sqlalchemy.dialects import registry  # noqa
 
