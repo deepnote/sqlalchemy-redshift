@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sqlalchemy-redshift/sqlalchemy-redshift"
+Homepage = "https://github.com/deepnote/sqlalchemy-redshift"
 
 [project.entry-points."sqlalchemy.dialects"]
 redshift = "sqlalchemy_redshift.dialect:RedshiftDialect_psycopg2"

@@ -1,9 +1,11 @@
 from importlib.metadata import version, PackageNotFoundError
 from packaging.version import parse as parse_version
 
+MIN_PSYCOPG2_VERSION = parse_version('2.5')
+
 for package in ['psycopg2', 'psycopg2-binary']:
     try:
-        if parse_version(version(package)) < parse_version('2.5'):
+        if parse_version(version(package)) < parse_version(MIN_PSYCOPG2_VERSION):
             raise ImportError('Minimum required version for psycopg2 is 2.5')
         break
     except PackageNotFoundError:
