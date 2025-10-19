@@ -3,7 +3,7 @@ requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sqlalchemy-redshift"
+name = "deepnote-sqlalchemy-redshift"
 dynamic = ["version"]
 description = "Amazon Redshift Dialect for sqlalchemy"
 readme = "README.rst"
@@ -29,8 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "SQLAlchemy>=0.9.2,<3.0.0",
-    "packaging",
+    "SQLAlchemy>=1.4.15,<3.0.0",
 ]
 
 [project.urls]

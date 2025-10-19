@@ -1418,7 +1418,7 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
         except ImportError:
             raise ImportError(
                 'No module named {}'.format(cls.driver)
-            )
+            ) from None
 
     @classmethod
     def dbapi(cls):
@@ -1434,12 +1434,12 @@ class RedshiftDialect_psycopg2(
     @classmethod
     def import_dbapi(cls):
         # Use super() to properly call the mixin's implementation
-        return super(RedshiftDialect_psycopg2, cls).import_dbapi()
+        return super().import_dbapi()
 
     @classmethod
     def dbapi(cls):
         # Use super() for backwards compatibility with SQLAlchemy < 2.0
-        return super(RedshiftDialect_psycopg2, cls).dbapi()
+        return super().dbapi()
 
     def _set_backslash_escapes(self, connection):
         self._backslash_escapes = "off"
