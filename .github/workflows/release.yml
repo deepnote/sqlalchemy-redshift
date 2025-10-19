@@ -1,0 +1,37 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build package
+        run: uv build
+
+      - name: Smoke test wheel
+        run: |
+          uv run --isolated --no-project --with dist/*.whl python -c "import sqlalchemy_redshift; print(sqlalchemy_redshift.__version__)"
+
+      - name: Publish to PyPI
+        run: uv publish

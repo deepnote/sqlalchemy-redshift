@@ -13,7 +13,7 @@ authors = [
     {name = "Matt George", email = "mgeorge@gmail.com"},
 ]
 maintainers = [
-    {name = "Thomas Grainger", email = "sqlalchemy-redshift@graingert.co.uk"},
+    {name = "Deepnote", email = "product-engineers@deepnote.com"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -46,6 +46,8 @@ source = "uv-dynamic-versioning"
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.1"
+vcs = "git"
+style = "pep440"
 
 [tool.hatch.build.targets.wheel]
 packages = ["sqlalchemy_redshift"]
