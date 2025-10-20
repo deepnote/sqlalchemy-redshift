@@ -3,25 +3,25 @@ import json
 import re
 from collections import defaultdict, namedtuple
 from logging import getLogger
+from importlib.resources import files
 
-import pkg_resources
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 from packaging.version import Version
-from sqlalchemy import inspect
-from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION
+from sqlalchemy import inspect, util
+from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, ENUM
 from sqlalchemy.dialects.postgresql.base import (PGCompiler, PGDDLCompiler,
                                                  PGDialect, PGExecutionContext,
                                                  PGIdentifierPreparer,
                                                  PGTypeCompiler)
 from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-from sqlalchemy.dialects.postgresql.psycopg2cffi import PGDialect_psycopg2cffi
 from sqlalchemy.engine import reflection
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import (BinaryExpression, BooleanClauseList,
                                        Delete)
 from sqlalchemy.sql.type_api import TypeEngine
+from sqlalchemy.sql import sqltypes
 from sqlalchemy.types import (BIGINT, BOOLEAN, CHAR, DATE, DECIMAL, INTEGER,
                               REAL, SMALLINT, TIMESTAMP, VARCHAR, NullType)
 
@@ -72,7 +72,7 @@ __all__ = (
     'HLLSKETCH',
 
     'RedshiftDialect', 'RedshiftDialect_psycopg2',
-    'RedshiftDialect_psycopg2cffi', 'RedshiftDialect_redshift_connector',
+    'RedshiftDialect_redshift_connector',
 
     'CopyCommand', 'UnloadFromSelect', 'Compression',
     'Encoding', 'Format', 'CreateLibraryCommand', 'AlterTableAppendCommand',
@@ -981,6 +981,191 @@ class RedshiftDialectMixin(DefaultDialect):
                 relation_names.append(key.name)
         return relation_names
 
+    # Copied from SQLAlchemy 1.4 to support 1.4 and 2.0 simultaneously
+    # https://github.com/sqlalchemy/sqlalchemy/blob/rel_1_4/lib/sqlalchemy/dialects/postgresql/base.py#L4007
+    def __get_column_info(
+        self,
+        name,
+        format_type,
+        default,
+        notnull,
+        domains,
+        enums,
+        schema,
+        comment,
+        generated,
+        identity,
+    ):
+        def _handle_array_type(attype):
+            return (
+                # strip '[]' from integer[], etc.
+                re.sub(r"\[\]$", "", attype),
+                attype.endswith("[]"),
+            )
+
+        if format_type is None:
+            no_format_type = True
+            attype = format_type = "no format_type()"
+            is_array = False
+        else:
+            no_format_type = False
+
+            # strip (*) from character varying(5), timestamp(5)
+            # with time zone, geometry(POLYGON), etc.
+            attype = re.sub(r"\(.*\)", "", format_type)
+
+            # strip '[]' from integer[], etc. and check if an array
+            attype, is_array = _handle_array_type(attype)
+
+        # strip quotes from case sensitive enum or domain names
+        enum_or_domain_key = tuple(util.quoted_token_parser(attype))
+
+        nullable = not notnull
+
+        charlen = re.search(r"\(([\d,]+)\)", format_type)
+        if charlen:
+            charlen = charlen.group(1)
+        args = re.search(r"\((.*)\)", format_type)
+        if args and args.group(1):
+            args = tuple(re.split(r"\s*,\s*", args.group(1)))
+        else:
+            args = ()
+        kwargs = {}
+
+        if attype == "numeric":
+            if charlen:
+                prec, scale = charlen.split(",")
+                args = (int(prec), int(scale))
+            else:
+                args = ()
+        elif attype == "double precision":
+            args = (53,)
+        elif attype == "integer":
+            args = ()
+        elif attype in ("timestamp with time zone", "time with time zone"):
+            kwargs["timezone"] = True
+            if charlen:
+                kwargs["precision"] = int(charlen)
+            args = ()
+        elif attype in (
+            "timestamp without time zone",
+            "time without time zone",
+            "time",
+        ):
+            kwargs["timezone"] = False
+            if charlen:
+                kwargs["precision"] = int(charlen)
+            args = ()
+        elif attype == "bit varying":
+            kwargs["varying"] = True
+            if charlen:
+                args = (int(charlen),)
+            else:
+                args = ()
+        elif attype.startswith("interval"):
+            field_match = re.match(r"interval (.+)", attype, re.I)
+            if charlen:
+                kwargs["precision"] = int(charlen)
+            if field_match:
+                kwargs["fields"] = field_match.group(1)
+            attype = "interval"
+            args = ()
+        elif charlen:
+            args = (int(charlen),)
+
+        while True:
+            # looping here to suit nested domains
+            if attype in self.ischema_names:
+                coltype = self.ischema_names[attype]
+                break
+            elif enum_or_domain_key in enums:
+                enum = enums[enum_or_domain_key]
+                coltype = ENUM
+                kwargs["name"] = enum["name"]
+                if not enum["visible"]:
+                    kwargs["schema"] = enum["schema"]
+                args = tuple(enum["labels"])
+                break
+            elif enum_or_domain_key in domains:
+                domain = domains[enum_or_domain_key]
+                attype = domain["attype"]
+                attype, is_array = _handle_array_type(attype)
+                # strip quotes from case sensitive enum or domain names
+                enum_or_domain_key = tuple(util.quoted_token_parser(attype))
+                # A table can't override a not null on the domain,
+                # but can override nullable
+                nullable = nullable and domain["nullable"]
+                if domain["default"] and not default:
+                    # It can, however, override the default
+                    # value, but can't set it to null.
+                    default = domain["default"]
+                continue
+            else:
+                coltype = None
+                break
+
+        if coltype:
+            coltype = coltype(*args, **kwargs)
+            if is_array:
+                coltype = self.ischema_names["_array"](coltype)
+        elif no_format_type:
+            util.warn(
+                "PostgreSQL format_type() returned NULL for column '%s'"
+                % (name,)
+            )
+            coltype = sqltypes.NULLTYPE
+        else:
+            util.warn(
+                "Did not recognize type '%s' of column '%s'" % (attype, name)
+            )
+            coltype = sqltypes.NULLTYPE
+
+        # If a zero byte or blank string depending on driver (is also absent
+        # for older PG versions), then not a generated column. Otherwise, s =
+        # stored. (Other values might be added in the future.)
+        if generated not in (None, "", b"\x00"):
+            computed = dict(
+                sqltext=default, persisted=generated in ("s", b"s")
+            )
+            default = None
+        else:
+            computed = None
+
+        # adjust the default value
+        autoincrement = False
+        if default is not None:
+            match = re.search(r"""(nextval\(')([^']+)('.*$)""", default)
+            if match is not None:
+                if issubclass(coltype._type_affinity, sqltypes.Integer):
+                    autoincrement = True
+                # the default is related to a Sequence
+                sch = schema
+                if "." not in match.group(2) and sch is not None:
+                    # unconditionally quote the schema name.  this could
+                    # later be enhanced to obey quoting rules /
+                    # "quote schema"
+                    default = (
+                        match.group(1)
+                        + ('"%s"' % sch)
+                        + "."
+                        + match.group(2)
+                        + match.group(3)
+                    )
+
+        column_info = dict(
+            name=name,
+            type=coltype,
+            nullable=nullable,
+            default=default,
+            autoincrement=autoincrement or identity is not None,
+            comment=comment,
+        )
+        if computed is not None:
+            column_info["computed"] = computed
+        if identity is not None:
+            column_info["identity"] = identity
+        return column_info
+
     def _get_column_info(self, *args, **kwargs):
         kw = kwargs.copy()
         encode = kw.pop('encode', None)
@@ -994,10 +1179,11 @@ class RedshiftDialectMixin(DefaultDialect):
         elif sa_version >= Version('1.4.0') and 'identity' not in kw:
             kw['identity'] = None
 
-        column_info = super(RedshiftDialectMixin, self)._get_column_info(
+        column_info = self.__get_column_info(
             *args,
             **kw
         )
+
         if isinstance(column_info['type'], VARCHAR):
             if column_info['type'].length is None:
                 column_info['type'] = NullType()
@@ -1213,9 +1399,8 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
         """
         default_args = {
             'sslmode': 'verify-full',
-            'sslrootcert': pkg_resources.resource_filename(
-                __name__,
-                'redshift-ca-bundle.crt'
+            'sslrootcert': str(
+                files('sqlalchemy_redshift').joinpath('redshift-ca-bundle.crt')
             ),
         }
         cargs, cparams = (
@@ -1227,13 +1412,18 @@ class Psycopg2RedshiftDialectMixin(RedshiftDialectMixin):
         return cargs, default_args
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         try:
             return importlib.import_module(cls.driver)
         except ImportError:
             raise ImportError(
                 'No module named {}'.format(cls.driver)
-            )
+            ) from None
+
+    @classmethod
+    def dbapi(cls):
+        # Backwards compatibility with SQLAlchemy < 2.0
+        return cls.import_dbapi()
 
 
 class RedshiftDialect_psycopg2(
@@ -1241,21 +1431,22 @@ class RedshiftDialect_psycopg2(
 ):
     supports_statement_cache = False
 
+    @classmethod
+    def import_dbapi(cls):
+        # Use super() to properly call the mixin's implementation
+        return super().import_dbapi()
+
+    @classmethod
+    def dbapi(cls):
+        # Use super() for backwards compatibility with SQLAlchemy < 2.0
+        return super().dbapi()
+
     def _set_backslash_escapes(self, connection):
         self._backslash_escapes = "off"
 
 
 # Add RedshiftDialect synonym for backwards compatibility.
 RedshiftDialect = RedshiftDialect_psycopg2
-
-
-class RedshiftDialect_psycopg2cffi(
-    Psycopg2RedshiftDialectMixin, PGDialect_psycopg2cffi
-):
-    supports_statement_cache = False
-
-    def _set_backslash_escapes(self, connection):
-        self._backslash_escapes = "off"
 
 
 class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
@@ -1316,7 +1507,7 @@ class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
         self.client_encoding = client_encoding
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         try:
             driver_module = importlib.import_module(cls.driver)
 
@@ -1332,6 +1523,11 @@ class RedshiftDialect_redshift_connector(RedshiftDialectMixin, PGDialect):
                 'No module named redshift_connector. Please install '
                 'redshift_connector to use this sqlalchemy dialect.'
             )
+
+    @classmethod
+    def dbapi(cls):
+        # Backwards compatibility with SQLAlchemy < 2.0
+        return cls.import_dbapi()
 
     def set_client_encoding(self, connection, client_encoding):
         """

@@ -226,19 +226,10 @@ def test_external_table_reflection(redshift_engine, iam_role_arn):
         location 's3://awssampledbuswest2/tickit/spectrum/sales/'
         table properties ('numRows'='172000');
     """
-    from sqlalchemy_redshift.dialect import \
-        RedshiftDialect_psycopg2cffi
-    opts = (
-        {"isolation_level": "AUTOCOMMIT"}
-        if not isinstance(
-            redshift_engine.dialect, RedshiftDialect_psycopg2cffi
-        ) else {}
-    )
+    opts = {"isolation_level": "AUTOCOMMIT"}
 
     with redshift_engine.connect().execution_options(**opts) as conn:
         conn.execute(sa.text(table_ddl))
-        if isinstance(redshift_engine.dialect, RedshiftDialect_psycopg2cffi):
-            conn.execute(sa.text("COMMIT"))
 
         insp = inspect(redshift_engine)
         table_columns_definition = insp.get_columns(
@@ -258,5 +249,3 @@ def test_external_table_reflection(redshift_engine, iam_role_arn):
         conn.execute(
             sa.text("DROP SCHEMA IF EXISTS bananas DROP EXTERNAL DATABASE")
         )
-        if isinstance(redshift_engine.dialect, RedshiftDialect_psycopg2cffi):
-            conn.execute(sa.text("COMMIT"))

@@ -29,9 +29,9 @@ SECRET_ACCESS_KEY_RE = re.compile('[A-Za-z0-9/+=]{40}')
 TOKEN_RE = re.compile('[A-Za-z0-9/+=]+')
 AWS_PARTITIONS = frozenset({'aws', 'aws-cn', 'aws-us-gov'})
 AWS_ACCOUNT_ID_RE = re.compile('[0-9]{12}')
-IAM_ROLE_NAME_RE = re.compile('[A-Za-z0-9+=,.@\-_]{1,64}')  # noqa
-IAM_ROLE_ARN_RE = re.compile('arn:(aws|aws-cn|aws-us-gov):iam::'
-                             '[0-9]{12}:role/[A-Za-z0-9+=,.@\-_]{1,64}')  # noqa
+IAM_ROLE_NAME_RE = re.compile(r'[A-Za-z0-9+=,.@\-_]{1,64}')
+IAM_ROLE_ARN_RE = re.compile(r'arn:(aws|aws-cn|aws-us-gov):iam::'
+                             r'[0-9]{12}:role/[A-Za-z0-9+=,.@\-_]{1,64}')
 
 
 def _process_aws_credentials(access_key_id=None, secret_access_key=None,
@@ -501,7 +501,7 @@ class CopyCommand(_ExecutableClause):
     aws_account_id: str, optional
         AWS account ID for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
-         or role arns (``iam_role_arns``) directly.
+        or role arns (``iam_role_arns``) directly.
     iam_role_name: str, optional
         IAM role name for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
@@ -930,7 +930,7 @@ class CreateLibraryCommand(_ExecutableClause):
     aws_account_id: str, optional
         AWS account ID for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)
-         or role arns (``iam_role_arns``) directly.
+        or role arns (``iam_role_arns``) directly.
     iam_role_name: str, optional
         IAM role name for role-based credentials. Required unless you supply
         key based credentials (``access_key_id`` and ``secret_access_key``)

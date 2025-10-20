@@ -116,7 +116,7 @@ class CreateMaterializedView(DDLElement):
     ...     sa.Column('id', sa.Integer, primary_key=True),
     ...     sa.Column('name', sa.String)
     ... )
-    >>> selectable = sa.select([user.c.id, user.c.name], from_obj=user)
+    >>> selectable = sa.select(user.c.id, user.c.name)
     >>> view = CreateMaterializedView(
     ...     'materialized_view_of_users',
     ...     selectable,
@@ -124,13 +124,10 @@ class CreateMaterializedView(DDLElement):
     ...     sortkey='name'
     ... )
     >>> print(view.compile(engine))
-    <BLANKLINE>
     CREATE MATERIALIZED VIEW materialized_view_of_users
     DISTKEY (id) SORTKEY (name)
     AS SELECT "user".id, "user".name
     FROM "user"
-    <BLANKLINE>
-    <BLANKLINE>
 
     The materialized view can take full advantage of Redshift's distributed
     architecture via distribution styles and sort keys.
@@ -224,10 +221,7 @@ class DropMaterializedView(DDLElement):
     ...     if_exists=True
     ... )
     >>> print(drop.compile(engine))
-    <BLANKLINE>
     DROP MATERIALIZED VIEW IF EXISTS materialized_view_of_users
-    <BLANKLINE>
-    <BLANKLINE>
 
     This can be included in any execute() statement.
     """

@@ -1,14 +1,17 @@
-from pkg_resources import DistributionNotFound, get_distribution, parse_version
+from importlib.metadata import version, PackageNotFoundError
+from packaging.version import parse as parse_version
 
-for package in ['psycopg2', 'psycopg2-binary', 'psycopg2cffi']:
+MIN_PSYCOPG2_VERSION = parse_version('2.5')
+
+for package in ['psycopg2', 'psycopg2-binary']:
     try:
-        if get_distribution(package).parsed_version < parse_version('2.5'):
+        if parse_version(version(package)) < MIN_PSYCOPG2_VERSION:
             raise ImportError('Minimum required version for psycopg2 is 2.5')
         break
-    except DistributionNotFound:
+    except PackageNotFoundError:
         pass
 
-__version__ = get_distribution('sqlalchemy-redshift').version
+__version__ = version('deepnote-sqlalchemy-redshift')
 
 from sqlalchemy.dialects import registry  # noqa
 
@@ -19,10 +22,6 @@ registry.register(
 registry.register(
     "redshift.psycopg2", "sqlalchemy_redshift.dialect",
     "RedshiftDialect_psycopg2"
-)
-registry.register(
-    'redshift+psycopg2cffi', 'sqlalchemy_redshift.dialect',
-    'RedshiftDialect_psycopg2cffi',
 )
 
 registry.register(
